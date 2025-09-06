@@ -2,3 +2,4 @@
 /test-results
 .env
 /playwright-report
+/allure-results
