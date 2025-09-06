@@ -2,14 +2,20 @@
   "name": "payrails-task",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "playwright test"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
     "@playwright/test": "^1.55.0",
-    "@types/node": "^24.3.1"
+    "@types/node": "^24.3.1",
+    "allure-playwright": "^3.3.3",
+    "prettier": "^3.6.2"
   },
   "dependencies": {
     "dotenv": "^17.2.2"
