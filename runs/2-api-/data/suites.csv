@@ -1,0 +1,4 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","3","Validate Time Series Daily - compact size","chromium","Sun Sep 07 18:24:15 UTC 2025","passed","Sun Sep 07 18:24:15 UTC 2025","Time Series Daily API Tests","","",""
+"","1","Validate Time Series Daily - full size","chromium","Sun Sep 07 18:24:15 UTC 2025","passed","Sun Sep 07 18:24:15 UTC 2025","Time Series Daily API Tests","","",""
+"","1","Validate Company Overview API Response Structure","chromium","Sun Sep 07 18:24:15 UTC 2025","passed","Sun Sep 07 18:24:15 UTC 2025","Company Overview API Tests","","",""
