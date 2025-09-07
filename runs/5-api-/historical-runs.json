@@ -1,0 +1,84 @@
+{
+  "runs": [
+    {
+      "runId": "17532456627",
+      "runNumber": 5,
+      "timestamp": "2025-09-07T18:45:07Z",
+      "suite": "api",
+      "branch": "main",
+      "status": "success",
+      "actor": "Mohammed394",
+      "event": "workflow_dispatch",
+      "reportUrl": "https://mohammed394.github.io/alphaVantage-task/runs/5-api-/",
+      "latestReportUrl": "https://mohammed394.github.io/alphaVantage-task/",
+      "trendsAvailable": true,
+      "statistics": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "broken": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "runId": "17532352673",
+      "runNumber": 4,
+      "timestamp": "2025-09-07T18:34:51Z",
+      "suite": "regression",
+      "branch": "main",
+      "status": "success",
+      "actor": "Mohammed394",
+      "event": "workflow_dispatch",
+      "reportUrl": "https://mohammed394.github.io/alphaVantage-task/runs/4-regression-/",
+      "latestReportUrl": "https://mohammed394.github.io/alphaVantage-task/",
+      "trendsAvailable": true,
+      "statistics": {
+        "total": 5,
+        "passed": 5,
+        "failed": 0,
+        "broken": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "runId": "17532304916",
+      "runNumber": 3,
+      "timestamp": "2025-09-07T18:30:48Z",
+      "suite": "performance",
+      "branch": "main",
+      "status": "success",
+      "actor": "Mohammed394",
+      "event": "workflow_dispatch",
+      "reportUrl": "https://mohammed394.github.io/alphaVantage-task/runs/3-performance-/",
+      "latestReportUrl": "https://mohammed394.github.io/alphaVantage-task/",
+      "trendsAvailable": true,
+      "statistics": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "broken": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "runId": "17532218052",
+      "runNumber": 2,
+      "timestamp": "2025-09-07T18:24:30Z",
+      "suite": "api",
+      "branch": "main",
+      "status": "success",
+      "actor": "Mohammed394",
+      "event": "workflow_dispatch",
+      "reportUrl": "https://mohammed394.github.io/alphaVantage-task/runs/2-api-/",
+      "latestReportUrl": "https://mohammed394.github.io/alphaVantage-task/",
+      "trendsAvailable": true,
+      "statistics": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "broken": 0,
+        "skipped": 0
+      }
+    }
+  ]
+}
