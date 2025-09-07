@@ -308,13 +308,6 @@
                         <option value="regression">Regression</option>
                     </select>
                     
-                    <label>Environment:</label>
-                    <select id="envFilter" onchange="filterHistory()">
-                        <option value="">All Environments</option>
-                        <option value="staging">Staging</option>
-                        <option value="prod">Production</option>
-                    </select>
-                    
                     <label>Service:</label>
                     <select id="serviceFilter" onchange="filterHistory()">
                         <option value="">All Services</option>
@@ -339,7 +332,6 @@
                                 <th>Date/Time</th>
                                 <th>Suite</th>
                                 <th>Service</th>
-                                <th>Environment</th>
                                 <th>Status</th>
                                 <th>Tests</th>
                                 <th>Success Rate</th>
@@ -572,7 +564,6 @@
                         <td>${date}</td>
                         <td><span class="suite-badge ${suiteClass}">${run.suite}</span></td>
                         <td><span style="font-size: 0.9em; color: #666;">${serviceName}</span></td>
-                        <td>${run.environment}</td>
                         <td><span class="status-badge ${statusClass}">${run.status}</span></td>
                         <td>${testsInfo}</td>
                         <td>${successRate}</td>
@@ -586,13 +577,11 @@
         // Filter history
         function filterHistory() {
             const suiteFilter = document.getElementById('suiteFilter').value;
-            const envFilter = document.getElementById('envFilter').value;
             const serviceFilter = document.getElementById('serviceFilter').value;
             const dateFilter = parseInt(document.getElementById('dateFilter').value);
 
             filteredData = historicalData.filter(run => {
                 if (suiteFilter && run.suite !== suiteFilter) return false;
-                if (envFilter && run.environment !== envFilter) return false;
                 if (serviceFilter && (run.callerRepo || '') !== serviceFilter) return false;
                 
                 if (dateFilter > 0) {
