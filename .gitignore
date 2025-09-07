@@ -3,3 +3,6 @@
 .env
 /playwright-report
 /allure-results
+/lighthouse-reports
+*.lighthouse-report.html
+*.lighthouse-report.json
