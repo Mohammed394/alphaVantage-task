@@ -1,0 +1,689 @@
+name: Playwright E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Test suite to run: api, performance, or regression"
+        required: true
+        default: api
+        type: choice
+        options:
+          - api
+          - performance
+          - regression
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: e2e-runs
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    name: Run Playwright (${{ inputs.suite || (github.event_name == 'schedule' && 'regression') || (github.event_name == 'workflow_dispatch' && 'api') || 'smoke' }})
+    runs-on: ubuntu-latest
+    env:
+      TEST_ENV: ${{ inputs.test_env || 'staging' }}
+      SUITE: ${{ inputs.suite || (github.event_name == 'schedule' && 'regression') || (github.event_name == 'workflow_dispatch' && 'api') || 'smoke' }}
+      ALLURE_DASHBOARD_URL: https://mohammed394.github.io/alphaVantage-task/
+      DASHBOARD_REPO: Mohammed394/alphaVantage-task
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      E2E_SLACK_CHANNEL_ID: ${{ secrets.E2E_SLACK_CHANNEL_ID }}
+    steps:
+      - name: Checkout tests repository
+        uses: actions/checkout@v4
+        with:
+          repository: Mohammed394/alphaVantage-task
+          ref: ${{ github.ref_name }}
+          ssh-key: ${{ secrets.SSH_KEY }}
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('./package-lock.json').packages['node_modules/@playwright/test'].version)")" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright-version.outputs.PLAYWRIGHT_VERSION }}-${{ runner.os }}
+          restore-keys: |
+            playwright-${{ steps.playwright-version.outputs.PLAYWRIGHT_VERSION }}-
+            playwright-
+
+      - name: Install Playwright browsers (if not cached)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
+
+      - name: Install only system dependencies (browsers cached)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
+
+      - name: Set up environment variables from secrets
+        run: |
+          echo "Setting up environment variables for ${{ env.TEST_ENV }} environment"
+          echo "API_KEY=${{ secrets.API_KEY }}" >> $GITHUB_ENV
+          echo "BASE_URL=${{ secrets.BASE_URL }}" >> $GITHUB_ENV
+          echo "✅ Environment variables configured"
+
+      - name: Run performance tests
+        if: env.SUITE == 'performance'
+        run: npx playwright test --grep "@performance"
+
+      - name: Run API tests only
+        if: env.SUITE == 'api'
+        run: npx playwright test --grep "@api"
+
+      - name: Run full regression
+        if: env.SUITE == 'regression'
+        run: npx playwright test
+
+      - name: Ensure test-results directory exists
+        if: always()
+        run: |
+          mkdir -p test-results
+          if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
+            cp -r allure-results/* test-results/ 2>/dev/null || true
+          fi
+
+      - name: Check if test-results exist
+        id: check-test-results
+        if: always()
+        run: |
+          if [ -d "test-results" ] && [ "$(ls -A test-results 2>/dev/null)" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload test-results artifact
+        if: always() && steps.check-test-results.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ env.SUITE }}
+          path: |
+            test-results/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Step 1 - Generate Allure report for current tests
+        if: always()
+        run: |          
+          if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
+            echo "✅ Found $(find allure-results -name "*-result.json" | wc -l) test results"
+          else
+            mkdir -p allure-results
+          fi
+          
+          cat > allure-results/environment.properties << EOF
+          Suite=${SUITE}
+          TestEnv=${TEST_ENV}
+          RunID=${{ github.run_id }}
+          RunNumber=${{ github.run_number }}
+          Actor=${{ github.actor }}
+          EOF
+          
+          cat > allure-results/executor.json << EOF
+          {
+            "name": "GitHub Actions",
+            "type": "github",
+            "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "buildOrder": ${{ github.run_number }},
+            "buildName": "Run #${{ github.run_number }} (${{ env.SUITE }})",
+            "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "reportUrl": "https://mohammed394.github.io/alphaVantage-task/",
+            "reportName": "E2E Test Report"
+          }
+          EOF
+          
+          npm install -g allure-commandline
+          allure generate allure-results --clean -o allure-report-current
+
+      # 2. Fetch historical Allure data
+      - name: Step 2 - Multi-tiered Historical Data Fetch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔧 Multi-tiered data fetch"
+          mkdir -p historical-allure-results
+          ARCHIVE_FOUND=false
+          
+          # Try GitHub Pages first
+          ARCHIVE_URL="https://mohammed394.github.io/alphaVantage-task/allure-results-archive.tar.gz"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --head "$ARCHIVE_URL")
+          
+          if [ "$HTTP_STATUS" = "200" ]; then
+            curl -s "$ARCHIVE_URL" > historical-archive.tar.gz
+            
+            if [ -f "historical-archive.tar.gz" ] && [ -s "historical-archive.tar.gz" ]; then
+              DOWNLOAD_SIZE=$(stat -f%z historical-archive.tar.gz 2>/dev/null || stat -c%s historical-archive.tar.gz 2>/dev/null || echo "unknown")
+              DOWNLOAD_SIZE_MB=$((DOWNLOAD_SIZE / 1024 / 1024))
+              
+              tar -xzf historical-archive.tar.gz -C historical-allure-results
+              HISTORICAL_RESULT_COUNT=$(find historical-allure-results -name "*-result.json" | wc -l)
+              echo "✅ GitHub Pages: ${DOWNLOAD_SIZE_MB}MB archive with $HISTORICAL_RESULT_COUNT tests"
+              ARCHIVE_FOUND=true
+            fi
+          fi
+          
+          # Try GitHub Releases if Pages failed
+          if [ "$ARCHIVE_FOUND" = "false" ]; then
+            LATEST_RELEASE=$(gh release list --limit 20 --json tagName,assets 2>/dev/null | jq -r '.[] | select(.assets[] | .name == "allure-results-archive.tar.gz") | .tagName' | head -1 2>/dev/null || echo "")
+            
+            if [ -n "$LATEST_RELEASE" ]; then
+              RELEASE_URL="https://github.com/Mohammed394/alphaVantage-task/releases/download/$LATEST_RELEASE/allure-results-archive.tar.gz"
+              curl -s -L "$RELEASE_URL" > historical-archive.tar.gz
+              
+              if [ -f "historical-archive.tar.gz" ] && [ -s "historical-archive.tar.gz" ]; then
+                DOWNLOAD_SIZE=$(stat -f%z historical-archive.tar.gz 2>/dev/null || stat -c%s historical-archive.tar.gz 2>/dev/null || echo "unknown")
+                DOWNLOAD_SIZE_MB=$((DOWNLOAD_SIZE / 1024 / 1024))
+                
+                tar -xzf historical-archive.tar.gz -C historical-allure-results
+                HISTORICAL_RESULT_COUNT=$(find historical-allure-results -name "*-result.json" | wc -l)
+                echo "✅ GitHub Releases: ${DOWNLOAD_SIZE_MB}MB archive with $HISTORICAL_RESULT_COUNT tests"
+                ARCHIVE_FOUND=true
+              fi
+            fi
+          fi
+          
+          if [ "$ARCHIVE_FOUND" = "false" ]; then
+            echo "🆕 Starting fresh - no historical data found"
+          fi
+          
+      - name: Step 3 - Generate Allure report with historical trends
+        if: always()
+        run: |
+          mkdir -p allure-report-with-history
+          
+          if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
+            cp -r allure-results/* allure-report-with-history/ 2>/dev/null || true
+            CURRENT_COUNT=$(find allure-results -name "*-result.json" | wc -l)
+          fi
+          
+          if [ -d "historical-allure-results" ] && [ "$(ls -A historical-allure-results)" ]; then
+            
+            mkdir -p allure-report-with-history/history
+            
+            cp -r historical-allure-results/* allure-report-with-history/history/ 2>/dev/null || true
+            
+            HISTORICAL_FILES=$(find allure-report-with-history/history -name "*-result.json" | wc -l)
+            
+            cd allure-report-with-history/history
+            if [ "$HISTORICAL_FILES" -gt 60 ]; then
+              ls -1t *-result.json 2>/dev/null | tail -n +61 | xargs rm -f 2>/dev/null || true
+              CLEANED_FILES=$(find . -name "*-result.json" | wc -l)
+              echo "🧹 Cleaned up old results, keeping $CLEANED_FILES historical files (30-day retention)"
+            fi
+            cd ../..
+          else
+            echo "ℹ️ No historical data available for trends (first run)"
+          fi
+          
+          allure generate allure-report-with-history --clean -o allure-report
+          
+          if [ -f "allure-report/widgets/summary.json" ]; then
+            CURRENT_TOTAL=$(jq -r '.statistic.total // 0' allure-report/widgets/summary.json 2>/dev/null || echo "0")
+          else
+            echo "⚠️ Warning: summary.json not found in generated report"
+          fi
+          
+          if [ -f "allure-report/widgets/history-trend.json" ]; then
+            TREND_DATA=$(jq '.[] | length' allure-report/widgets/history-trend.json 2>/dev/null | head -1 || echo "0")
+          else
+            echo "ℹ️ No historical trends yet (first run or insufficient data)"
+          fi
+
+          FINAL_COUNT=$(find allure-report-with-history -name "*-result.json" | wc -l)
+
+      - name: Step 4 - Upload and store results for historical trends
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |          
+          mkdir -p archive-content
+          
+          if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
+            RUN_DIR="run-${{ github.run_number }}-$(date +%s)"
+            mkdir -p "archive-content/$RUN_DIR"
+            cp -r allure-results/* "archive-content/$RUN_DIR/"
+            
+            CURRENT_COUNT=$(find allure-results -name "*-result.json" | wc -l)
+          fi
+          
+          if [ -d "historical-allure-results" ] && [ "$(ls -A historical-allure-results)" ]; then
+            cp -r historical-allure-results/* archive-content/ 2>/dev/null || true
+            TOTAL_ARCHIVE_COUNT=$(find archive-content -name "*-result.json" | wc -l)
+          fi
+          
+          cd archive-content
+          RUN_DIRS=$(find . -maxdepth 1 -type d -name "run-*" | wc -l)
+          
+          # 🔧 Multi-tiered Archive Management System
+          echo "🔧 Multi-tiered Archive: $RUN_DIRS runs"
+          
+          # Initial cleanup (30-day retention)
+          if [ "$RUN_DIRS" -gt 35 ]; then
+            find . -maxdepth 1 -type d -name "run-*" | sort | head -n -35 | xargs rm -rf 2>/dev/null || true
+            RUN_DIRS=$(find . -maxdepth 1 -type d -name "run-*" | wc -l)
+            echo "📁 Cleaned up to $RUN_DIRS runs"
+          fi
+          cd ..
+          
+          # Progressive archive size optimization
+          MAX_ITERATIONS=5
+          ITERATION=0
+          TARGET_SIZE=104857600  # 100MB in bytes
+          
+          while [ "$ITERATION" -lt "$MAX_ITERATIONS" ]; do
+            tar -czf allure-results-archive.tar.gz -C archive-content .
+            
+            if [ -f "allure-results-archive.tar.gz" ]; then
+              ARCHIVE_SIZE=$(stat -f%z allure-results-archive.tar.gz 2>/dev/null || stat -c%s allure-results-archive.tar.gz 2>/dev/null || echo "0")
+              ARCHIVE_SIZE_MB=$((ARCHIVE_SIZE / 1024 / 1024))
+              echo "� Iteration $((ITERATION + 1)): Archive size ${ARCHIVE_SIZE_MB}MB (${ARCHIVE_SIZE} bytes)"
+              
+              # If archive is small enough for GitHub Pages, we're done
+              if [ "$ARCHIVE_SIZE" -le "$TARGET_SIZE" ]; then
+                echo "✅ Tier 2 - Archive fits GitHub Pages (${ARCHIVE_SIZE_MB}MB ≤ 100MB)"
+                FITS_GITHUB_PAGES=true
+                break
+              fi
+              
+              # Archive too large, reduce further
+              echo "⚠️ Archive too large (${ARCHIVE_SIZE_MB}MB > 100MB), reducing data..."
+              
+              cd archive-content
+              CURRENT_RUNS=$(find . -maxdepth 1 -type d -name "run-*" | wc -l)
+              
+              if [ "$CURRENT_RUNS" -gt 10 ]; then
+                # Remove 25% of runs each iteration
+                REMOVE_COUNT=$((CURRENT_RUNS / 4))
+                if [ "$REMOVE_COUNT" -lt 5 ]; then
+                  REMOVE_COUNT=5
+                fi
+                
+                echo "🗑️ Removing $REMOVE_COUNT oldest runs (${CURRENT_RUNS} → $((CURRENT_RUNS - REMOVE_COUNT)))"
+                find . -maxdepth 1 -type d -name "run-*" | sort | head -n "$REMOVE_COUNT" | xargs rm -rf 2>/dev/null || true
+              else
+                echo "⚠️ Cannot reduce further (only $CURRENT_RUNS runs left), will use Tier 3"
+                FITS_GITHUB_PAGES=false
+                break
+              fi
+              cd ..
+            else
+              echo "❌ Failed to create archive"
+              exit 1
+            fi
+            
+            ITERATION=$((ITERATION + 1))
+          done
+          
+          # Final size check and tier assignment
+          if [ -f "allure-results-archive.tar.gz" ]; then
+            FINAL_ARCHIVE_SIZE=$(stat -f%z allure-results-archive.tar.gz 2>/dev/null || stat -c%s allure-results-archive.tar.gz 2>/dev/null || echo "0")
+            FINAL_SIZE_MB=$((FINAL_ARCHIVE_SIZE / 1024 / 1024))
+            FINAL_RUNS=$(find archive-content -maxdepth 1 -type d -name "run-*" | wc -l)
+            
+            echo "📊 Final archive: ${FINAL_SIZE_MB}MB with $FINAL_RUNS runs"
+            
+            if [ "$FINAL_ARCHIVE_SIZE" -le "$TARGET_SIZE" ]; then
+              echo "✅ Archive optimized: ${FINAL_SIZE_MB}MB (fits GitHub Pages)"
+              mkdir -p allure-report
+              cp allure-results-archive.tar.gz allure-report/
+              USE_GITHUB_RELEASES=false
+              ARCHIVE_TOO_LARGE_FOR_PAGES=false
+            else
+              echo "⚠️ Archive too large: ${FINAL_SIZE_MB}MB (will use GitHub Releases)"
+              # Still copy to allure-report for artifacts, but will exclude from Pages
+              mkdir -p allure-report
+              cp allure-results-archive.tar.gz allure-report/
+              USE_GITHUB_RELEASES=true
+              ARCHIVE_TOO_LARGE_FOR_PAGES=true
+            fi
+          else
+            echo "❌ Failed to create final archive"
+            exit 1
+          fi
+          
+          # Always create the allure-report directory
+          mkdir -p allure-report
+          
+          if [ "$ARCHIVE_TOO_LARGE_FOR_PAGES" = "false" ]; then
+            echo "📁 Archive will be included in GitHub Pages"
+          else
+            echo "📁 Archive too large for Pages - available in Releases/Artifacts only"
+          fi
+          
+          # Export for later steps
+          echo "USE_GITHUB_RELEASES=$USE_GITHUB_RELEASES" >> $GITHUB_ENV
+          echo "FINAL_ARCHIVE_SIZE_MB=$FINAL_SIZE_MB" >> $GITHUB_ENV
+          echo "FINAL_RUNS_COUNT=$FINAL_RUNS" >> $GITHUB_ENV
+
+      - name: Upload allure-results with trends artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-with-trends-${{ github.run_number }}
+          path: |
+            allure-report-with-history/**
+            allure-report/**
+            archive-content/**
+          retention-days: 30
+
+      - name: Tier 3 - Upload large archive to GitHub Releases
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$USE_GITHUB_RELEASES" = "true" ] && [ -f "allure-results-archive.tar.gz" ]; then
+            ARCHIVE_SIZE_MB=$((FINAL_ARCHIVE_SIZE / 1024 / 1024))
+            RELEASE_TAG="archive-$(date +%Y%m%d-%H%M)-${{ github.run_number }}"
+            RELEASE_NAME="📦 Historical Archive - Run ${{ github.run_number }}"
+            
+            echo "🚀 Creating GitHub Release (${ARCHIVE_SIZE_MB}MB)"
+            
+            # Create release with archive
+            gh release create "$RELEASE_TAG" \
+              --title "$RELEASE_NAME" \
+              --notes "� Historical Archive (${ARCHIVE_SIZE_MB}MB) - Run ${{ github.run_number }}
+            
+            Contains $FINAL_RUNS historical test runs, optimized by multi-tiered system.
+            Too large for GitHub Pages, stored in Releases for automatic retrieval." \
+              --target main \
+              allure-results-archive.tar.gz || echo "⚠️ Release creation failed"
+              
+            if [ $? -eq 0 ]; then
+              echo "✅ Archive uploaded to GitHub Releases: $RELEASE_TAG"
+            fi
+          else
+            echo "ℹ️ Tier 3 - Not needed, archive fits in GitHub Pages (Tier 2)"
+          fi
+
+      - name: Archive Summary
+        if: always()
+        run: |
+          echo "🔧 Archive Management Summary"
+          
+          if [ -d "allure-results" ]; then
+            CURRENT_TESTS=$(find allure-results -name "*-result.json" | wc -l)
+            echo "📊 Current: $CURRENT_TESTS tests"
+          fi
+          
+          if [ -d "historical-allure-results" ]; then
+            HISTORICAL_TESTS=$(find historical-allure-results -name "*-result.json" | wc -l)
+            echo "📚 Historical: $HISTORICAL_TESTS tests"
+          fi
+          
+          if [ -f "allure-results-archive.tar.gz" ]; then
+            ARCHIVE_SIZE=$(stat -f%z allure-results-archive.tar.gz 2>/dev/null || stat -c%s allure-results-archive.tar.gz 2>/dev/null || echo "0")
+            ARCHIVE_SIZE_MB=$((ARCHIVE_SIZE / 1024 / 1024))
+            echo "📦 Archive: ${ARCHIVE_SIZE_MB}MB"
+            
+            if [ "$USE_GITHUB_RELEASES" = "true" ]; then
+              echo "💾 Storage: GitHub Releases + Artifacts"
+            else
+              echo "💾 Storage: GitHub Pages + Artifacts"
+            fi
+          fi
+
+      - name: Step 5 - Generate dashboard data and publish with trends
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |          
+          RUN_DIR="runs/${{ github.run_number }}-${{ env.SUITE }}-${{ env.TEST_ENV }}"
+          RUN_REPORT_URL="https://mohammed394.github.io/alphaVantage-task/${RUN_DIR}/"
+          LATEST_REPORT_URL="https://mohammed394.github.io/alphaVantage-task/"
+
+          for file in working-dashboard.html dashboard.html; do
+            if [ -f "$file" ]; then
+              cp "$file" allure-report/
+            fi
+          done
+          
+          TOTAL_TESTS=0
+          PASSED_TESTS=0
+          FAILED_TESTS=0
+          BROKEN_TESTS=0
+          SKIPPED_TESTS=0
+          
+          if [ -f "allure-report/widgets/summary.json" ]; then
+            TOTAL_TESTS=$(jq -r '.statistic.total // 0' allure-report/widgets/summary.json 2>/dev/null || echo "0")
+            PASSED_TESTS=$(jq -r '.statistic.passed // 0' allure-report/widgets/summary.json 2>/dev/null || echo "0")
+            FAILED_TESTS=$(jq -r '.statistic.failed // 0' allure-report/widgets/summary.json 2>/dev/null || echo "0")
+            BROKEN_TESTS=$(jq -r '.statistic.broken // 0' allure-report/widgets/summary.json 2>/dev/null || echo "0")
+            SKIPPED_TESTS=$(jq -r '.statistic.skipped // 0' allure-report/widgets/summary.json 2>/dev/null || echo "0")
+          fi
+          
+          if [ "${{ job.status }}" = "cancelled" ]; then
+            RUN_STATUS="cancelled"
+          elif [ "$FAILED_TESTS" -eq 0 ] && [ "$BROKEN_TESTS" -eq 0 ] && [ "$TOTAL_TESTS" -gt 0 ]; then
+            RUN_STATUS="success"
+          elif [ "$TOTAL_TESTS" -eq 0 ]; then
+            RUN_STATUS="unknown"
+          else
+            RUN_STATUS="failure"
+          fi
+          
+          cat > allure-report/dashboard-summary.json << EOF
+          {
+            "runId": "${{ github.run_id }}",
+            "runNumber": ${{ github.run_number }},
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "suite": "${{ env.SUITE }}",
+            "branch": "${{ github.ref_name }}",
+            "status": "$RUN_STATUS",
+            "actor": "${{ github.actor }}",
+            "event": "${{ github.event_name }}",
+            "reportUrl": "${RUN_REPORT_URL}",
+            "latestReportUrl": "${LATEST_REPORT_URL}",
+            "trendsAvailable": $([ -f "allure-report/widgets/history-trend.json" ] && echo "true" || echo "false"),
+            "statistics": {
+              "total": $TOTAL_TESTS,
+              "passed": $PASSED_TESTS,
+              "failed": $FAILED_TESTS,
+              "broken": $BROKEN_TESTS,
+              "skipped": $SKIPPED_TESTS
+            }
+          }
+          EOF
+          
+          if curl -s "https://mohammed394.github.io/alphaVantage-task/historical-runs.json" -o existing-historical.json 2>/dev/null && [ -s existing-historical.json ]; then
+            EXISTING_DATA=$(cat existing-historical.json)
+          else
+            EXISTING_DATA='{"runs": []}'
+          fi
+          
+          CURRENT_RUN=$(cat allure-report/dashboard-summary.json)
+          echo "$EXISTING_DATA" | jq --argjson current "$CURRENT_RUN" \
+            '.runs = [$current] + .runs | .runs = .runs[0:100]' > allure-report/historical-runs.json
+          TOTAL_RUNS=$(jq '.runs | length' allure-report/historical-runs.json)
+
+      - name: Verify report before publishing
+        if: always()
+        run: |          
+          if [ -d "allure-report" ]; then
+
+            if [ -f "allure-report/widgets/summary.json" ]; then
+              REPORT_TESTS=$(jq -r '.statistic.total // 0' allure-report/widgets/summary.json 2>/dev/null || echo "0")
+            else
+              echo "⚠️ No summary.json found in report"
+            fi
+            
+            if [ -f "allure-report/widgets/history-trend.json" ]; then
+              TREND_POINTS=$(jq 'length' allure-report/widgets/history-trend.json 2>/dev/null || echo "0")
+            else
+              echo "ℹ️ No historical trends (first run or insufficient data)"
+            fi
+
+            ls -la allure-report/ | grep -E "(index\.html|summary\.json|history.*\.json|allure-results-archive\.tar\.gz|historical-runs\.json)" || echo "Some expected files missing"
+          else
+            exit 1
+          fi
+
+      - name: Prepare lightweight GitHub Pages content
+        if: always()
+        run: |
+          # Create lightweight version for GitHub Pages (exclude large archive)
+          mkdir -p allure-report-pages
+          
+          # Copy all files except the large archive
+          cp -r allure-report/* allure-report-pages/ 2>/dev/null || true
+          
+          # Remove the large archive from Pages content to stay under 1GB limit
+          if [ -f "allure-report-pages/allure-results-archive.tar.gz" ]; then
+            rm -f allure-report-pages/allure-results-archive.tar.gz
+            echo "📦 Removed large archive from Pages content"
+          fi
+          
+          # Check final size
+          PAGES_SIZE=$(du -sh allure-report-pages | cut -f1)
+          echo "📊 GitHub Pages content size: $PAGES_SIZE"
+          
+          # Verify essential files are present
+          ls -la allure-report-pages/ | grep -E "(index\.html|dashboard\.html|working-dashboard\.html|historical-runs\.json)" || echo "⚠️ Some files missing"
+
+      - name: Publish archival per-run Allure to GitHub Pages (same repo)
+        if: always() && github.repository == 'Mohammed394/alphaVantage-task'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./allure-report-pages
+          publish_branch: gh-pages
+          destination_dir: runs/${{ github.run_number }}-${{ env.SUITE }}-${{ env.TEST_ENV }}
+          keep_files: true
+
+      - name: Publish latest Allure to GitHub Pages root (same repo)
+        if: always() && github.repository == 'Mohammed394/alphaVantage-task'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./allure-report-pages
+          publish_branch: gh-pages
+          keep_files: true
+
+      - name: Cleanup SSH agents (prevent socket conflicts)
+        if: always()
+        run: |
+          pkill -f ssh-agent || true
+          rm -rf /tmp/ssh-* || true
+          # Remove gh-pages action's default auth socket if left behind by previous steps
+          if [ -S "/tmp/ssh-auth.sock" ]; then
+            rm -f /tmp/ssh-auth.sock || true
+          fi
+
+      - name: Pre-cleanup for cross-repo per-run publish
+        if: always() && github.repository != 'Mohammed394/alphaVantage-task'
+        run: |
+          pkill -f ssh-agent || true
+          rm -f /tmp/ssh-auth.sock || true
+
+      - name: Publish archival per-run Allure to GitHub Pages (cross-repo with error handling)
+        if: always() && github.repository != 'Mohammed394/alphaVantage-task'
+        continue-on-error: true
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          deploy_key: ${{ secrets.SSH_KEY }}
+          external_repository: Mohammed394/alphaVantage-task
+          publish_dir: ./allure-report-pages
+          publish_branch: gh-pages
+          destination_dir: runs/${{ github.run_number }}-${{ env.SUITE }}-${{ env.TEST_ENV }}
+          keep_files: true
+
+      - name: Clean up SSH after per-run publish
+        if: always() && github.repository != 'Mohammed394/alphaVantage-task'
+        run: |
+          pkill -f ssh-agent || true
+          rm -f /tmp/ssh-auth.sock || true
+
+      - name: Publish latest Allure to GitHub Pages root (cross-repo with error handling)
+        if: always() && github.repository != 'Mohammed394/alphaVantage-task'
+        continue-on-error: true
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          deploy_key: ${{ secrets.SSH_KEY }}
+          external_repository: Mohammed394/alphaVantage-task
+          publish_dir: ./allure-report-pages
+          publish_branch: gh-pages
+          keep_files: true
+
+      - name: Pre-cleanup for cross-repo latest publish
+        if: always() && github.repository != 'Mohammed394/alphaVantage-task'
+        run: |
+          pkill -f ssh-agent || true
+          rm -f /tmp/ssh-auth.sock || true
+
+      - name: Publish latest Allure to GitHub Pages root (cross-repo with error handling)
+        if: always() && github.repository != 'Mohammed394/alphaVantage-task'
+        continue-on-error: true
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          deploy_key: ${{ secrets.SSH_KEY }}
+          external_repository: Mohammed394/alphaVantage-task
+          publish_dir: ./allure-report-pages
+          publish_branch: gh-pages
+          keep_files: true
+
+      - name: Slack - post message
+        if: always() && env.SLACK_BOT_TOKEN != '' && env.E2E_SLACK_CHANNEL_ID != ''
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: ${{ secrets.E2E_SLACK_CHANNEL_ID }}
+          payload: |
+            {
+              "text": "E2E Test Results",
+              "attachments": [
+                {
+                  "color": "${{ job.status == 'success' && 'good' || 'danger' }}",
+                  "fields": [
+                    {
+                      "title": "Suite",
+                      "value": "${{ env.SUITE }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Environment",
+                      "value": "${{ env.TEST_ENV }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Repository",
+                      "value": "${{ inputs.caller_repo || github.repository }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Status",
+                      "value": "${{ job.status }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Allure Test Result",
+                      "value": "<https://mohammed394.github.io/alphaVantage-task/runs/${{ github.run_number }}-${{ env.SUITE }}-${{ env.TEST_ENV }}/|View Latest Run Report>",
+                      "short": true
+                    },
+                    {
+                      "title": "Test Results Dashboard",
+                      "value": "<https://mohammed394.github.io/alphaVantage-task/working-dashboard.html|View Historical Dashboard>",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
