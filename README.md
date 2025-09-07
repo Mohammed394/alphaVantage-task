@@ -149,6 +149,7 @@ tests/
 
 https://github.com/user-attachments/assets/89ebf365-ea6f-4dab-8f29-088d6021e195
 
+Note: In the demo i commented all the tests since i hit the rate limit of the free api so no logs will be displayed in the allure report temporarly 
 ## 🛠️ Usage Instructions
 
 ### Prerequisites
