@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { getCompanyOverviewDataWithPerformance } from "../../pages/alphavantage-apis/categories/fundamental.category";
-import { companyOverviewFactory } from "../../pages/alphavantage-apis/factories/fundamentalFactory";
+import { getCompanyOverviewDataWithPerformance } from "../../../pages/alphavantage-apis/categories/fundamental.category";
+import { companyOverviewFactory } from "../../../pages/alphavantage-apis/factories/fundamentalFactory";
 
 test.describe("Company Overview API Performance Tests - Using Enhanced Function", () => {
   test(

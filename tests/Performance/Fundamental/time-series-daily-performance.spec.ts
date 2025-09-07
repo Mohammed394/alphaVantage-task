@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { getCoreStockDataWithPerformance } from "../../pages/alphavantage-apis/categories/coreStock.category";
-import { coreStockFactory } from "../../pages/alphavantage-apis/factories/coreStockFactory";
+import { getCoreStockDataWithPerformance } from "../../../pages/alphavantage-apis/categories/coreStock.category";
+import { coreStockFactory } from "../../../pages/alphavantage-apis/factories/coreStockFactory";
 
 test.describe("Core Stock API Performance Tests - Using Enhanced Function", () => {
   test(
