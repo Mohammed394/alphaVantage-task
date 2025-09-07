@@ -1,5 +1,5 @@
 import { request, APIRequestContext, APIResponse } from "@playwright/test";
-
+import { expect } from "@playwright/test";
 export interface APIContext {
   get<T>(url: string): Promise<T>;
   post<T>(url: string, data: any): Promise<T>;
@@ -24,24 +24,34 @@ export async function createAPIContext(
   return {
     async get<T>(url: string): Promise<T> {
       const response: APIResponse = await apiRequestContext.get(url);
+      expect(response.status()).toBeGreaterThanOrEqual(200);
+      expect(response.status()).toBeLessThan(300);
       return logAndParseResponse<T>("GET", url, response);
     },
     async post<T>(url: string, data: any): Promise<T> {
       const response: APIResponse = await apiRequestContext.post(url, { data });
+      expect(response.status()).toBeGreaterThanOrEqual(200);
+      expect(response.status()).toBeLessThan(300);
       return logAndParseResponse<T>("POST", url, response);
     },
     async put<T>(url: string, data: any): Promise<T> {
       const response: APIResponse = await apiRequestContext.put(url, { data });
+      expect(response.status()).toBeGreaterThanOrEqual(200);
+      expect(response.status()).toBeLessThan(300);
       return logAndParseResponse<T>("PUT", url, response);
     },
     async patch<T>(url: string, data: any): Promise<T> {
       const response: APIResponse = await apiRequestContext.patch(url, {
         data,
       });
+      expect(response.status()).toBeGreaterThanOrEqual(200);
+      expect(response.status()).toBeLessThan(300);
       return logAndParseResponse<T>("PATCH", url, response);
     },
     async delete<T>(url: string): Promise<T> {
       const response: APIResponse = await apiRequestContext.delete(url);
+      expect(response.status()).toBeGreaterThanOrEqual(200);
+      expect(response.status()).toBeLessThan(300);
       return logAndParseResponse<T>("DELETE", url, response);
     },
   };
