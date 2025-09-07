@@ -28,7 +28,6 @@ jobs:
     name: Run Playwright (${{ inputs.suite || (github.event_name == 'schedule' && 'regression') || (github.event_name == 'workflow_dispatch' && 'api') || 'smoke' }})
     runs-on: ubuntu-latest
     env:
-      TEST_ENV: ${{ inputs.test_env || 'staging' }}
       SUITE: ${{ inputs.suite || (github.event_name == 'schedule' && 'regression') || (github.event_name == 'workflow_dispatch' && 'api') || 'smoke' }}
       ALLURE_DASHBOARD_URL: https://mohammed394.github.io/alphaVantage-task/
       DASHBOARD_REPO: Mohammed394/alphaVantage-task
@@ -40,7 +39,7 @@ jobs:
         with:
           repository: Mohammed394/alphaVantage-task
           ref: ${{ github.ref_name }}
-          ssh-key: ${{ secrets.SSH_KEY }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
@@ -450,9 +449,12 @@ jobs:
           RUN_REPORT_URL="https://mohammed394.github.io/alphaVantage-task/${RUN_DIR}/"
           LATEST_REPORT_URL="https://mohammed394.github.io/alphaVantage-task/"
 
-          for file in working-dashboard.html dashboard.html; do
+          for file in dashboard.html historical-dashboard.html; do
             if [ -f "$file" ]; then
               cp "$file" allure-report/
+              echo "Copied $file to allure-report/"
+            else
+              echo "Warning: $file not found in root directory"
             fi
           done
           
@@ -469,6 +471,20 @@ jobs:
             BROKEN_TESTS=$(jq -r '.statistic.broken // 0' allure-report/widgets/summary.json 2>/dev/null || echo "0")
             SKIPPED_TESTS=$(jq -r '.statistic.skipped // 0' allure-report/widgets/summary.json 2>/dev/null || echo "0")
           fi
+          
+          # Ensure all test counts are valid numbers
+          TOTAL_TESTS=${TOTAL_TESTS:-0}
+          PASSED_TESTS=${PASSED_TESTS:-0}
+          FAILED_TESTS=${FAILED_TESTS:-0}
+          BROKEN_TESTS=${BROKEN_TESTS:-0}
+          SKIPPED_TESTS=${SKIPPED_TESTS:-0}
+          
+          # Validate numeric values
+          [[ ! "$TOTAL_TESTS" =~ ^[0-9]+$ ]] && TOTAL_TESTS=0
+          [[ ! "$PASSED_TESTS" =~ ^[0-9]+$ ]] && PASSED_TESTS=0
+          [[ ! "$FAILED_TESTS" =~ ^[0-9]+$ ]] && FAILED_TESTS=0
+          [[ ! "$BROKEN_TESTS" =~ ^[0-9]+$ ]] && BROKEN_TESTS=0
+          [[ ! "$SKIPPED_TESTS" =~ ^[0-9]+$ ]] && SKIPPED_TESTS=0
           
           if [ "${{ job.status }}" = "cancelled" ]; then
             RUN_STATUS="cancelled"
@@ -503,16 +519,56 @@ jobs:
           }
           EOF
           
+          # Validate the generated JSON
+          if ! jq empty allure-report/dashboard-summary.json 2>/dev/null; then
+            echo "Error: Generated JSON is invalid, creating fallback"
+            cat > allure-report/dashboard-summary.json << EOF
+          {
+            "runId": "${{ github.run_id }}",
+            "runNumber": ${{ github.run_number }},
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "suite": "${{ env.SUITE }}",
+            "branch": "${{ github.ref_name }}",
+            "status": "unknown",
+            "actor": "${{ github.actor }}",
+            "event": "${{ github.event_name }}",
+            "reportUrl": "${RUN_REPORT_URL}",
+            "latestReportUrl": "${LATEST_REPORT_URL}",
+            "trendsAvailable": false,
+            "statistics": {
+              "total": 0,
+              "passed": 0,
+              "failed": 0,
+              "broken": 0,
+              "skipped": 0
+            }
+          }
+          EOF
+          fi
+          
           if curl -s "https://mohammed394.github.io/alphaVantage-task/historical-runs.json" -o existing-historical.json 2>/dev/null && [ -s existing-historical.json ]; then
-            EXISTING_DATA=$(cat existing-historical.json)
+            # Validate existing historical data
+            if jq empty existing-historical.json 2>/dev/null; then
+              EXISTING_DATA=$(cat existing-historical.json)
+            else
+              echo "Warning: Existing historical data is invalid JSON, starting fresh"
+              EXISTING_DATA='{"runs": []}'
+            fi
           else
             EXISTING_DATA='{"runs": []}'
           fi
           
           CURRENT_RUN=$(cat allure-report/dashboard-summary.json)
-          echo "$EXISTING_DATA" | jq --argjson current "$CURRENT_RUN" \
-            '.runs = [$current] + .runs | .runs = .runs[0:100]' > allure-report/historical-runs.json
-          TOTAL_RUNS=$(jq '.runs | length' allure-report/historical-runs.json)
+          
+          # Create updated historical data with error handling
+          if echo "$EXISTING_DATA" | jq --argjson current "$CURRENT_RUN" \
+            '.runs = [$current] + .runs | .runs = .runs[0:100]' > allure-report/historical-runs.json 2>/dev/null; then
+            TOTAL_RUNS=$(jq '.runs | length' allure-report/historical-runs.json 2>/dev/null || echo "1")
+          else
+            echo "Error updating historical data, creating fallback"
+            jq -n --argjson current "$CURRENT_RUN" '{"runs": [$current]}' > allure-report/historical-runs.json
+            TOTAL_RUNS=1
+          fi
 
       - name: Verify report before publishing
         if: always()
@@ -598,7 +654,7 @@ jobs:
         continue-on-error: true
         uses: peaceiris/actions-gh-pages@v3
         with:
-          deploy_key: ${{ secrets.SSH_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           external_repository: Mohammed394/alphaVantage-task
           publish_dir: ./allure-report-pages
           publish_branch: gh-pages
@@ -616,7 +672,7 @@ jobs:
         continue-on-error: true
         uses: peaceiris/actions-gh-pages@v3
         with:
-          deploy_key: ${{ secrets.SSH_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           external_repository: Mohammed394/alphaVantage-task
           publish_dir: ./allure-report-pages
           publish_branch: gh-pages
@@ -633,7 +689,7 @@ jobs:
         continue-on-error: true
         uses: peaceiris/actions-gh-pages@v3
         with:
-          deploy_key: ${{ secrets.SSH_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           external_repository: Mohammed394/alphaVantage-task
           publish_dir: ./allure-report-pages
           publish_branch: gh-pages
@@ -663,7 +719,7 @@ jobs:
                     },
                     {
                       "title": "Repository",
-                      "value": "${{ inputs.caller_repo || github.repository }}",
+                      "value": "${{ github.repository }}",
                       "short": true
                     },
                     {
