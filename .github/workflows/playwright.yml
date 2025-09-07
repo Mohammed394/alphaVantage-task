@@ -713,11 +713,6 @@ jobs:
                       "short": true
                     },
                     {
-                      "title": "Environment",
-                      "value": "${{ env.TEST_ENV }}",
-                      "short": true
-                    },
-                    {
                       "title": "Repository",
                       "value": "${{ github.repository }}",
                       "short": true
