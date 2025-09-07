@@ -162,9 +162,30 @@ cd alphaVantage-task
 # Install dependencies
 npm install
 
+# Install Playwright browsers (required for first-time setup)
+npx playwright install
+
+# Install Playwright browsers with system dependencies (if needed)
+npx playwright install --with-deps
+
 # Set up environment variables
 cp .env.example .env
 # Edit .env with your Alpha Vantage API key
+```
+
+### Playwright Setup
+```bash
+# Install specific browsers only
+npx playwright install chromium
+npx playwright install firefox
+npx playwright install webkit
+
+# Update Playwright to latest version
+npm update @playwright/test
+npx playwright install
+
+# Verify Playwright installation
+npx playwright --version
 ```
 
 ### Environment Configuration
