@@ -52,7 +52,7 @@ export default defineConfig({
     video: "retain-on-failure",
     // Lighthouse specific configurations
     launchOptions: {
-      args: ['--remote-debugging-port=9222'],
+      args: ["--remote-debugging-port=9222"],
     },
   },
 

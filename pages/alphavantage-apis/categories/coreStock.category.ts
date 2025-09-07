@@ -9,17 +9,17 @@ export async function getCoreStockData(
   payload: CoreStockRequest
 ): Promise<CoreStockResponse> {
   const api = await createAPIContext();
-  const apiKey = process.env.API_KEY || 'demo';
+  const apiKey = process.env.API_KEY || "demo";
   const url = `${process.env.BASE_URL}?function=TIME_SERIES_DAILY&symbol=${payload.symbol}&outputsize=${payload.outputsize}&apikey=${apiKey}`;
   const response = await api.get<CoreStockResponse>(url);
   return response;
 }
 
-export async function   getCoreStockDataWithPerformance(
+export async function getCoreStockDataWithPerformance(
   payload: CoreStockRequest
 ): Promise<CoreStockPerformanceResult> {
   const api = await createAPIContext();
-  const apiKey = process.env.API_KEY || 'demo';
+  const apiKey = process.env.API_KEY || "demo";
   const url = `${process.env.BASE_URL}?function=TIME_SERIES_DAILY&symbol=${payload.symbol}&outputsize=${payload.outputsize}&apikey=${apiKey}`;
 
   console.log(`🚀 Starting API call to: ${url.replace(apiKey, "[HIDDEN]")}`);

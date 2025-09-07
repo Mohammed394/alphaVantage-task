@@ -2,9 +2,7 @@ import { test, expect } from "@playwright/test";
 import { coreStockFactory } from "../../../pages/alphavantage-apis/factories/coreStockFactory";
 import { getCoreStockData } from "../../../pages/alphavantage-apis/categories/coreStock.category";
 
-
 test.describe("Time Series Daily API Tests", () => {
-
   test(
     "Validate Time Series Daily - compact size",
     { tag: ["@api", "@core-stock"] },

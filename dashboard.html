@@ -1,39 +1,88 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>E2E Test Reports</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; border-radius: 12px; text-align: center; margin-bottom: 30px; }
-        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        .card h3 { color: #333; margin-bottom: 15px; }
-        .card p { color: #666; margin-bottom: 20px; }
-        .btn { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; transition: background 0.3s; }
-        .btn:hover { background: #5a6fd8; }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px;
+        border-radius: 12px;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      .card {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      .card h3 {
+        color: #333;
+        margin-bottom: 15px;
+      }
+      .card p {
+        color: #666;
+        margin-bottom: 20px;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        transition: background 0.3s;
+      }
+      .btn:hover {
+        background: #5a6fd8;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1>🚀 E2E Test Reports</h1>
-            <p>Choose your preferred view</p>
+      <div class="header">
+        <h1>🚀 E2E Test Reports</h1>
+        <p>Choose your preferred view</p>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <h3>📊 Latest Test Report</h3>
+          <p>
+            View the most recent Allure test report with detailed results,
+            screenshots, and logs.
+          </p>
+          <a href="./index.html" class="btn">View Latest Report</a>
         </div>
-        <div class="cards">
-            <div class="card">
-                <h3>📊 Latest Test Report</h3>
-                <p>View the most recent Allure test report with detailed results, screenshots, and logs.</p>
-                <a href="./index.html" class="btn">View Latest Report</a>
-            </div>
-            <div class="card">
-                <h3>📈 Historical Dashboard</h3>
-                <p>Analyze trends, view historical data, and track test performance over time.</p>
-                <a href="./working-dashboard.html" class="btn">View Historical Data</a>
-            </div>
+        <div class="card">
+          <h3>📈 Historical Dashboard</h3>
+          <p>
+            Analyze trends, view historical data, and track test performance
+            over time.
+          </p>
+          <a href="./working-dashboard.html" class="btn"
+            >View Historical Data</a
+          >
         </div>
+      </div>
     </div>
-</body>
+  </body>
 </html>
