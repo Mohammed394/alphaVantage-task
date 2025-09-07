@@ -16,3 +16,10 @@ export interface CoreStockResponse {
     };
   };
 }
+export interface CoreStockPerformanceResult {
+  data: CoreStockResponse;
+  responseTime: number;
+  statusCode: number;
+  timestamp: string;
+  url: string;
+}

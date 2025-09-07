@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
+import { playAudit } from "playwright-lighthouse";
 
 /**
  * Read environment variables from file.
@@ -49,6 +50,10 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    // Lighthouse specific configurations
+    launchOptions: {
+      args: ['--remote-debugging-port=9222'],
+    },
   },
 
   /* Configure projects for major browsers */

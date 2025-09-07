@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { companyOverviewFactory } from "../../pages/alphavantage-apis/factories/fundamentalFactory";
-import { getCompanyOverviewData } from "../../pages/alphavantage-apis/categories/fundamental.category";
+import { companyOverviewFactory } from "../../../pages/alphavantage-apis/factories/fundamentalFactory";
+import { getCompanyOverviewData } from "../../../pages/alphavantage-apis/categories/fundamental.category";
 
 test.describe("Company Overview API Tests", () => {
-  test("Validate Company Overview API Response Structure", async () => {
+  test("Validate Company Overview API Response Structure", { tag: ['@api', '@fundamental'] }, async () => {
     const requestPayload = companyOverviewFactory();
     const response = await getCompanyOverviewData(requestPayload);
 

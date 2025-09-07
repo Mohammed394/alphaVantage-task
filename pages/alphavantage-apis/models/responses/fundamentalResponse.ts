@@ -55,3 +55,10 @@ export interface companyOverviewResponse {
   DividendDate: string;
   ExDividendDate: string;
 }
+export interface CompanyOverviewPerformanceResult {
+  data: companyOverviewResponse;
+  responseTime: number;
+  statusCode: number;
+  timestamp: string;
+  url: string;
+}
