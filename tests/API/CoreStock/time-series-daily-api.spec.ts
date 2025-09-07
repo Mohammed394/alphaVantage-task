@@ -1,13 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { coreStockFactory } from "../../../pages/alphavantage-apis/factories/coreStockFactory";
 import { getCoreStockData } from "../../../pages/alphavantage-apis/categories/coreStock.category";
-import {
-  ApiPerformanceTester,
-  ApiPerformanceThresholds,
-} from "../../../utils/api-performance-tester";
+
 
 test.describe("Time Series Daily API Tests", () => {
-  let performanceTester: ApiPerformanceTester;
 
   test(
     "Validate Time Series Daily - compact size",

@@ -734,7 +734,7 @@ jobs:
                     },
                     {
                       "title": "Test Results Dashboard",
-                      "value": "<https://mohammed394.github.io/alphaVantage-task/working-dashboard.html|View Historical Dashboard>",
+                      "value": "<https://mohammed394.github.io/alphaVantage-task/historical-dashboard.html|View Historical Dashboard>",
                       "short": true
                     }
                   ]
