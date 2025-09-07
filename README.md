@@ -145,6 +145,10 @@ tests/
 - **Performance Metrics**: Response time charts and analytics
 - **Filter Capabilities**: Time-based filtering and data exploration
 
+## 🔗 Demo
+
+https://github.com/user-attachments/assets/89ebf365-ea6f-4dab-8f29-088d6021e195
+
 ## 🛠️ Usage Instructions
 
 ### Prerequisites
@@ -342,7 +346,11 @@ The `.github/workflows/playwright.yml` workflow provides:
 - **Parallel Execution**: Optimized test execution
 - **Artifact Management**: Test reports and results storage
 - **Slack Integration**: Test result notifications
+  <img width="2987" height="1680" alt="image" src="https://github.com/user-attachments/assets/1862ff53-cc45-4bbb-b690-da57110893dc" />
+
 - **GitHub Pages**: Automated dashboard deployment
+  <img width="1426" height="845" alt="image" src="https://github.com/user-attachments/assets/85673761-6d77-4e75-9307-adf1e36514c6" />
+  <img width="2987" height="1680" alt="image" src="https://github.com/user-attachments/assets/29a13ee6-2d6e-4141-ac27-38597aa3543f" />
 
 ### Workflow Configuration
 ```yaml
@@ -451,9 +459,4 @@ npx playwright show-report
 - **Best Practices**: Target > 90
 - **SEO**: Target > 90
 
-## 🔗 Links
 
-- [Alpha Vantage API Documentation](https://www.alphavantage.co/documentation/)
-- [Playwright Documentation](https://playwright.dev/)
-- [Lighthouse Documentation](https://developers.google.com/web/tools/lighthouse)
-- [Allure Framework](https://docs.qameta.io/allure/)
