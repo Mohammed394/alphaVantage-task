@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E2E Historical Dashboard</title>
+            <title>E2E Historical Test Dashboard - Updated</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -232,9 +232,7 @@
         
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showTab('overview')">📊 Overview</button>
-            <button class="nav-tab" onclick="showTab('trends')">📈 Trends</button>
             <button class="nav-tab" onclick="showTab('history')">📚 History</button>
-            <button class="nav-tab" onclick="showTab('reports')">📋 Reports</button>
         </div>
         
         <!-- Overview Tab -->
@@ -266,10 +264,10 @@
                 <div class="chart-card">
                     <h3>📊 Test Results Distribution</h3>
                     <div id="resultsChart" class="simple-chart">
-                        <div class="bar" style="height: 0%; background: #4CAF50;" id="passed-bar" title="Passed">0</div>
-                        <div class="bar" style="height: 0%; background: #f44336;" id="failed-bar" title="Failed">0</div>
-                        <div class="bar" style="height: 0%; background: #FF9800;" id="broken-bar" title="Broken">0</div>
-                        <div class="bar" style="height: 0%; background: #9E9E9E;" id="skipped-bar" title="Skipped">0</div>
+                        <div class="bar" style="height: 0%; background: #4CAF50; color: black;" id="passed-bar" title="Passed">0</div>
+                        <div class="bar" style="height: 0%; background: #f44336; color: black;" id="failed-bar" title="Failed">0</div>
+                        <div class="bar" style="height: 0%; background: #FF9800; color: black;" id="broken-bar" title="Broken">0</div>
+                        <div class="bar" style="height: 0%; background: #9E9E9E; color: black;" id="skipped-bar" title="Skipped">0</div>
                     </div>
                 </div>
                 <div class="chart-card">
@@ -277,20 +275,6 @@
                     <div id="suitesChart">
                         <div id="suite-stats"></div>
                     </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Trends Tab -->
-        <div id="trends" class="tab-content">
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <h3>📈 Success Rate Trend (Last 10 Runs)</h3>
-                    <div id="successTrendChart" class="simple-chart"></div>
-                </div>
-                <div class="chart-card">
-                    <h3>🧪 Total Tests Trend (Last 10 Runs)</h3>
-                    <div id="testsTrendChart" class="simple-chart"></div>
                 </div>
             </div>
         </div>
@@ -337,6 +321,7 @@
                                 <th>Success Rate</th>
                                 <th>Branch</th>
                                 <th>Actor</th>
+                                <th>Report</th>
                             </tr>
                         </thead>
                         <tbody id="historyTableBody">
@@ -347,18 +332,6 @@
             </div>
         </div>
         
-        <!-- Reports Tab -->
-        <div id="reports" class="tab-content">
-            <div class="chart-card">
-                <h3>📋 Quick Access to Reports</h3>
-                <div style="padding: 20px;">
-                    <p><strong>🎯 Latest Allure Report:</strong> <a href="./index.html" target="_blank">View Current Report</a></p>
-                    <p><strong>📊 Test Results Portal:</strong> <a href="./portal.html" target="_blank">Detailed Analysis</a></p>
-                    <p><strong>📈 Simplified Dashboard:</strong> <a href="./simple-dashboard.html" target="_blank">Basic View</a></p>
-                    <p><strong>🔄 Dashboard Updates:</strong> This dashboard refreshes with each test run</p>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -454,7 +427,6 @@
         function createSimpleCharts() {
             createSimpleResultsChart();
             createSuitesStats();
-            createSimpleTrendCharts();
         }
 
         function createSimpleResultsChart() {
@@ -500,46 +472,6 @@
             document.getElementById('suite-stats').innerHTML = suiteStatsHtml || '<p>No data available</p>';
         }
 
-        function createSimpleTrendCharts() {
-            const last10Runs = historicalData.slice(0, 10).reverse();
-            
-            // Success rate trend
-            const successChart = document.getElementById('successTrendChart');
-            successChart.innerHTML = '';
-            
-            last10Runs.forEach((run, index) => {
-                const total = run.statistics?.total || 0;
-                const passed = run.statistics?.passed || 0;
-                const successRate = total > 0 ? ((passed / total) * 100) : 0;
-                
-                const bar = document.createElement('div');
-                bar.className = 'bar';
-                bar.style.height = `${(successRate / 100) * 160}px`;
-                bar.style.background = successRate >= 90 ? '#4CAF50' : successRate >= 70 ? '#FF9800' : '#f44336';
-                bar.textContent = Math.round(successRate);
-                bar.title = `Run ${index + 1}: ${successRate.toFixed(1)}%`;
-                successChart.appendChild(bar);
-            });
-            
-            // Tests count trend
-            const testsChart = document.getElementById('testsTrendChart');
-            testsChart.innerHTML = '';
-            
-            const maxTests = Math.max(...last10Runs.map(run => run.statistics?.total || 0));
-            
-            last10Runs.forEach((run, index) => {
-                const testCount = run.statistics?.total || 0;
-                
-                const bar = document.createElement('div');
-                bar.className = 'bar';
-                bar.style.height = maxTests > 0 ? `${(testCount / maxTests) * 160}px` : '10px';
-                bar.style.background = '#2196F3';
-                bar.textContent = testCount;
-                bar.title = `Run ${index + 1}: ${testCount} tests`;
-                testsChart.appendChild(bar);
-            });
-        }
-
         // Populate history table
         function populateHistoryTable() {
             const tbody = document.getElementById('historyTableBody');
@@ -558,6 +490,7 @@
                 const testsInfo = run.statistics?.total ? 
                     `${run.statistics.passed}/${run.statistics.total}` : 'N/A';
                 const serviceName = (run.callerRepo || 'E2E Automation').replace('Mohammed394/', '');
+                const reportUrl = run.reportUrl || run.latestReportUrl || './index.html';
 
                 return `
                     <tr>
@@ -569,6 +502,7 @@
                         <td>${successRate}</td>
                         <td>${run.branch}</td>
                         <td>${run.actor}</td>
+                        <td><a href="${reportUrl}" target="_blank">Open</a></td>
                     </tr>
                 `;
             }).join('');
@@ -577,11 +511,13 @@
         // Filter history
         function filterHistory() {
             const suiteFilter = document.getElementById('suiteFilter').value;
+            const envFilter = document.getElementById('envFilter').value;
             const serviceFilter = document.getElementById('serviceFilter').value;
             const dateFilter = parseInt(document.getElementById('dateFilter').value);
 
             filteredData = historicalData.filter(run => {
                 if (suiteFilter && run.suite !== suiteFilter) return false;
+                if (envFilter && run.environment !== envFilter) return false;
                 if (serviceFilter && (run.callerRepo || '') !== serviceFilter) return false;
                 
                 if (dateFilter > 0) {
