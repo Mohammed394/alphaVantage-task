@@ -10,4 +10,4 @@ export async function getCompanyOverviewData(
   const url = `${process.env.BASE_URL}?function=${payload.function}&symbol=${payload.symbol}&apikey=${apiKey}`;
   const response = await api.get<companyOverviewResponse>(url);
   return response;
-} 
+}
