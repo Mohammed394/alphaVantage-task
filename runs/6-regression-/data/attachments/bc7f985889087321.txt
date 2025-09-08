@@ -1,0 +1,2 @@
+Making GET request to: /query?function=TIME_SERIES_DAILY&symbol=IBM&outputsize=full&apikey=***HIDDEN***
+Response status code: 200

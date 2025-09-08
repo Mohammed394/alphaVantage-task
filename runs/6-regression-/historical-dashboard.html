@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>E2E Historical Test Dashboard - Updated</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f8f9fa;
+        color: #333;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        text-align: center;
+      }
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+      .header p {
+        font-size: 1.2em;
+        opacity: 0.9;
+      }
+
+      .nav-tabs {
+        display: flex;
+        background: white;
+        border-radius: 12px;
+        padding: 5px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .nav-tab {
+        flex: 1;
+        padding: 15px 20px;
+        text-align: center;
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.3s ease;
+      }
+      .nav-tab.active {
+        background: #667eea;
+        color: white;
+      }
+      .nav-tab:not(.active):hover {
+        background: #f0f0f0;
+      }
+
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+
+      .stats-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+      .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      .stat-number {
+        font-size: 2.5em;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .stat-label {
+        color: #666;
+        font-size: 0.9em;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .stat-trend {
+        font-size: 0.8em;
+        margin-top: 10px;
+      }
+      .trend-up {
+        color: #4caf50;
+      }
+      .trend-down {
+        color: #f44336;
+      }
+      .trend-neutral {
+        color: #666;
+      }
+
+      .charts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+      .chart-card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .chart-card h3 {
+        margin-bottom: 20px;
+        color: #333;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 10px;
+      }
+
+      .simple-chart {
+        height: 200px;
+        display: flex;
+        align-items: end;
+        justify-content: space-around;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 20px;
+        background: #fafafa;
+      }
+      .bar {
+        width: 40px;
+        background: #667eea;
+        border-radius: 4px 4px 0 0;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+        padding: 5px 0;
+      }
+
+      .pie-chart {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        margin: 0 auto;
+        position: relative;
+      }
+
+      .history-table {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .history-table h3 {
+        padding: 20px;
+        margin: 0;
+        background: #667eea;
+        color: white;
+      }
+      .table-container {
+        max-height: 600px;
+        overflow-y: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+      th {
+        background: #f8f9fa;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      tr:hover {
+        background: #f8f9fa;
+      }
+
+      .status-badge {
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .status-success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .status-failure {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .suite-badge {
+        padding: 4px 8px;
+        border-radius: 15px;
+        font-size: 0.8em;
+        font-weight: 500;
+      }
+      .suite-smoke {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .suite-api {
+        background: #d4edda;
+        color: #155724;
+      }
+      .suite-ui {
+        background: #cce5ff;
+        color: #004085;
+      }
+      .suite-regression {
+        background: #e2e3e5;
+        color: #383d41;
+      }
+
+      .filters {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .filter-group {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .filter-group label {
+        font-weight: 500;
+      }
+      .filter-group select {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+
+      @media (max-width: 768px) {
+        .charts-grid {
+          grid-template-columns: 1fr;
+        }
+        .nav-tabs {
+          flex-direction: column;
+        }
+        .filter-group {
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🚀E2E Test Dashboard</h1>
+        <p>Historical Test Results & Analytics</p>
+      </div>
+
+      <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showTab('overview')">
+          📊 Overview
+        </button>
+        <button class="nav-tab" onclick="showTab('history')">📚 History</button>
+      </div>
+
+      <!-- Overview Tab -->
+      <div id="overview" class="tab-content active">
+        <div class="stats-overview">
+          <div class="stat-card">
+            <div class="stat-number" id="total-runs" style="color: #667eea">
+              -
+            </div>
+            <div class="stat-label">Total Runs</div>
+            <div class="stat-trend" id="runs-trend"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="success-rate" style="color: #4caf50">
+              -
+            </div>
+            <div class="stat-label">Success Rate</div>
+            <div class="stat-trend" id="success-trend"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="avg-tests" style="color: #2196f3">
+              -
+            </div>
+            <div class="stat-label">Avg Tests/Run</div>
+            <div class="stat-trend" id="tests-trend"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="latest-run" style="color: #ff9800">
+              -
+            </div>
+            <div class="stat-label">Latest Run</div>
+            <div class="stat-trend" id="latest-trend"></div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>📊 Test Results Distribution</h3>
+            <div id="resultsChart" class="simple-chart">
+              <div
+                class="bar"
+                style="height: 0%; background: #4caf50; color: black"
+                id="passed-bar"
+                title="Passed"
+              >
+                0
+              </div>
+              <div
+                class="bar"
+                style="height: 0%; background: #f44336; color: black"
+                id="failed-bar"
+                title="Failed"
+              >
+                0
+              </div>
+              <div
+                class="bar"
+                style="height: 0%; background: #ff9800; color: black"
+                id="broken-bar"
+                title="Broken"
+              >
+                0
+              </div>
+              <div
+                class="bar"
+                style="height: 0%; background: #9e9e9e; color: black"
+                id="skipped-bar"
+                title="Skipped"
+              >
+                0
+              </div>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>🏃‍♂️ Test Suites Distribution</h3>
+            <div id="suitesChart">
+              <div id="suite-stats"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History Tab -->
+      <div id="history" class="tab-content">
+        <div class="filters">
+          <div class="filter-group">
+            <label>Suite:</label>
+            <select id="suiteFilter" onchange="filterHistory()">
+              <option value="">All Suites</option>
+              <option value="smoke">Smoke</option>
+              <option value="api">API</option>
+              <option value="ui">UI</option>
+              <option value="regression">Regression</option>
+            </select>
+
+            <label>Service:</label>
+            <select id="serviceFilter" onchange="filterHistory()">
+              <option value="">All Services</option>
+            </select>
+
+            <label>Date Range:</label>
+            <select id="dateFilter" onchange="filterHistory()">
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 90 days</option>
+              <option value="0">All time</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="history-table">
+          <h3>🕒 Test Run History</h3>
+          <div class="table-container">
+            <table id="historyTable">
+              <thead>
+                <tr>
+                  <th>Date/Time</th>
+                  <th>Suite</th>
+                  <th>Service</th>
+                  <th>Status</th>
+                  <th>Tests</th>
+                  <th>Success Rate</th>
+                  <th>Branch</th>
+                  <th>Actor</th>
+                  <th>Report</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                <tr>
+                  <td colspan="9">Loading historical data...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let historicalData = [];
+      let filteredData = [];
+
+      // Initialize dashboard
+      async function initDashboard() {
+        console.log("🚀 Initializing basic dashboard...");
+
+        try {
+          await loadHistoricalData();
+          updateOverviewStats();
+          createSimpleCharts();
+          populateHistoryTable();
+          console.log("✅ Dashboard initialized successfully!");
+        } catch (error) {
+          console.error("❌ Error initializing dashboard:", error);
+          showError(`Failed to load dashboard data: ${error.message}`);
+        }
+      }
+
+      // Load historical data
+      async function loadHistoricalData() {
+        try {
+          const response = await fetch("./historical-runs.json");
+
+          if (response.ok) {
+            const data = await response.json();
+            historicalData = data.runs || [];
+            filteredData = [...historicalData];
+            console.log("📊 Data loaded:", historicalData.length, "runs");
+
+            // Populate service filter
+            populateServiceFilter();
+          } else {
+            console.warn("⚠️ Historical data not found, using empty dataset");
+            historicalData = [];
+            filteredData = [];
+          }
+        } catch (error) {
+          console.warn("⚠️ Error loading historical data:", error);
+          historicalData = [];
+          filteredData = [];
+        }
+      }
+
+      // Populate service filter dropdown
+      function populateServiceFilter() {
+        const services = [
+          ...new Set(historicalData.map((run) => run.callerRepo || "Unknown")),
+        ];
+        const serviceFilter = document.getElementById("serviceFilter");
+
+        // Clear existing options except "All Services"
+        serviceFilter.innerHTML = '<option value="">All Services</option>';
+
+        services.forEach((service) => {
+          const option = document.createElement("option");
+          option.value = service;
+          option.textContent = service.replace("Mohammed394/", "");
+          serviceFilter.appendChild(option);
+        });
+      }
+
+      // Update overview statistics
+      function updateOverviewStats() {
+        const totalRuns = historicalData.length;
+        const successfulRuns = historicalData.filter(
+          (run) => run.status === "success"
+        ).length;
+        const successRate =
+          totalRuns > 0 ? ((successfulRuns / totalRuns) * 100).toFixed(1) : 0;
+
+        const totalTests = historicalData.reduce(
+          (sum, run) => sum + (run.statistics?.total || 0),
+          0
+        );
+        const avgTests = totalRuns > 0 ? Math.round(totalTests / totalRuns) : 0;
+
+        const latestRun = historicalData[0];
+        const latestDate = latestRun
+          ? new Date(latestRun.timestamp).toLocaleDateString()
+          : "No data";
+
+        document.getElementById("total-runs").textContent = totalRuns;
+        document.getElementById("success-rate").textContent = successRate + "%";
+        document.getElementById("avg-tests").textContent = avgTests;
+        document.getElementById("latest-run").textContent = latestDate;
+
+        // Add trend indicators
+        document.getElementById("runs-trend").innerHTML =
+          totalRuns > 0
+            ? `<span class="trend-up">↗ ${totalRuns} total</span>`
+            : '<span class="trend-neutral">No data</span>';
+
+        document.getElementById("success-trend").innerHTML =
+          successRate >= 90
+            ? `<span class="trend-up">↗ Excellent</span>`
+            : successRate >= 70
+              ? `<span class="trend-neutral">→ Good</span>`
+              : `<span class="trend-down">↘ Needs attention</span>`;
+      }
+
+      // Create simple charts without external libraries
+      function createSimpleCharts() {
+        createSimpleResultsChart();
+        createSuitesStats();
+      }
+
+      function createSimpleResultsChart() {
+        const totalPassed = historicalData.reduce(
+          (sum, run) => sum + (run.statistics?.passed || 0),
+          0
+        );
+        const totalFailed = historicalData.reduce(
+          (sum, run) => sum + (run.statistics?.failed || 0),
+          0
+        );
+        const totalBroken = historicalData.reduce(
+          (sum, run) => sum + (run.statistics?.broken || 0),
+          0
+        );
+        const totalSkipped = historicalData.reduce(
+          (sum, run) => sum + (run.statistics?.skipped || 0),
+          0
+        );
+
+        const total = totalPassed + totalFailed + totalBroken + totalSkipped;
+        const maxHeight = 160;
+
+        if (total > 0) {
+          document.getElementById("passed-bar").style.height =
+            `${(totalPassed / total) * maxHeight}px`;
+          document.getElementById("passed-bar").textContent = totalPassed;
+
+          document.getElementById("failed-bar").style.height =
+            `${(totalFailed / total) * maxHeight}px`;
+          document.getElementById("failed-bar").textContent = totalFailed;
+
+          document.getElementById("broken-bar").style.height =
+            `${(totalBroken / total) * maxHeight}px`;
+          document.getElementById("broken-bar").textContent = totalBroken;
+
+          document.getElementById("skipped-bar").style.height =
+            `${(totalSkipped / total) * maxHeight}px`;
+          document.getElementById("skipped-bar").textContent = totalSkipped;
+        }
+      }
+
+      function createSuitesStats() {
+        const suiteCounts = {};
+        historicalData.forEach((run) => {
+          suiteCounts[run.suite] = (suiteCounts[run.suite] || 0) + 1;
+        });
+
+        const suiteStatsHtml = Object.entries(suiteCounts)
+          .map(([suite, count]) => {
+            const percentage = ((count / historicalData.length) * 100).toFixed(
+              1
+            );
+            return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                        <span class="suite-badge suite-${suite}">${suite}</span>
+                        <span><strong>${count}</strong> runs (${percentage}%)</span>
+                    </div>
+                `;
+          })
+          .join("");
+
+        document.getElementById("suite-stats").innerHTML =
+          suiteStatsHtml || "<p>No data available</p>";
+      }
+
+      // Populate history table
+      function populateHistoryTable() {
+        const tbody = document.getElementById("historyTableBody");
+
+        if (filteredData.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="9"><div style="text-align: center; padding: 40px; color: #666;"><h3>No data available</h3><p>Run some tests to see historical data here.</p></div></td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = filteredData
+          .map((run) => {
+            const date = new Date(run.timestamp).toLocaleString();
+            const statusClass =
+              run.status === "success" ? "status-success" : "status-failure";
+            const suiteClass = `suite-${run.suite}`;
+            const successRate =
+              run.statistics?.total > 0
+                ? (
+                    (run.statistics.passed / run.statistics.total) *
+                    100
+                  ).toFixed(1) + "%"
+                : "N/A";
+            const testsInfo = run.statistics?.total
+              ? `${run.statistics.passed}/${run.statistics.total}`
+              : "N/A";
+            const serviceName = (run.callerRepo || "E2E Automation").replace(
+              "Mohammed394/",
+              ""
+            );
+            const reportUrl =
+              run.reportUrl || run.latestReportUrl || "./index.html";
+
+            return `
+                    <tr>
+                        <td>${date}</td>
+                        <td><span class="suite-badge ${suiteClass}">${run.suite}</span></td>
+                        <td><span style="font-size: 0.9em; color: #666;">${serviceName}</span></td>
+                        <td><span class="status-badge ${statusClass}">${run.status}</span></td>
+                        <td>${testsInfo}</td>
+                        <td>${successRate}</td>
+                        <td>${run.branch}</td>
+                        <td>${run.actor}</td>
+                        <td><a href="${reportUrl}" target="_blank">Open</a></td>
+                    </tr>
+                `;
+          })
+          .join("");
+      }
+
+      // Filter history
+      function filterHistory() {
+        const suiteFilter = document.getElementById("suiteFilter").value;
+        const envFilter = document.getElementById("envFilter").value;
+        const serviceFilter = document.getElementById("serviceFilter").value;
+        const dateFilter = parseInt(
+          document.getElementById("dateFilter").value
+        );
+
+        filteredData = historicalData.filter((run) => {
+          if (suiteFilter && run.suite !== suiteFilter) return false;
+          if (envFilter && run.environment !== envFilter) return false;
+          if (serviceFilter && (run.callerRepo || "") !== serviceFilter)
+            return false;
+
+          if (dateFilter > 0) {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - dateFilter);
+            if (new Date(run.timestamp) < cutoffDate) return false;
+          }
+
+          return true;
+        });
+
+        populateHistoryTable();
+      }
+
+      // Show tab
+      function showTab(tabName) {
+        document.querySelectorAll(".tab-content").forEach((tab) => {
+          tab.classList.remove("active");
+        });
+
+        document.querySelectorAll(".nav-tab").forEach((tab) => {
+          tab.classList.remove("active");
+        });
+
+        document.getElementById(tabName).classList.add("active");
+        event.target.classList.add("active");
+      }
+
+      // Show error message
+      function showError(message) {
+        const container = document.querySelector(".container");
+        const errorDiv = document.createElement("div");
+        errorDiv.innerHTML = `
+                <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
+        container.insertBefore(errorDiv, container.firstChild);
+      }
+
+      // Initialize dashboard when page loads
+      document.addEventListener("DOMContentLoaded", initDashboard);
+    </script>
+  </body>
+</html>
