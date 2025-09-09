@@ -1,0 +1,6 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","267","Validate Company Overview API Response Structure","chromium","Tue Sep 09 00:43:48 UTC 2025","passed","Tue Sep 09 00:43:49 UTC 2025","Company Overview API Tests","","",""
+"","241","should measure Company Overview API response time","chromium","Tue Sep 09 00:43:49 UTC 2025","passed","Tue Sep 09 00:43:49 UTC 2025","Company Overview API Performance Tests - Using Enhanced Function","","",""
+"","713","Validate Time Series Daily - full size","chromium","Tue Sep 09 00:43:48 UTC 2025","passed","Tue Sep 09 00:43:48 UTC 2025","Time Series Daily API Tests","","",""
+"","275","should measure Time Series Daily API response time - compact","chromium","Tue Sep 09 00:43:49 UTC 2025","passed","Tue Sep 09 00:43:49 UTC 2025","Core Stock API Performance Tests - Using Enhanced Function","","",""
+"","621","Validate Time Series Daily - compact size","chromium","Tue Sep 09 00:43:47 UTC 2025","passed","Tue Sep 09 00:43:48 UTC 2025","Time Series Daily API Tests","","",""
