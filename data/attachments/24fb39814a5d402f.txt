@@ -1,0 +1,9 @@
+🚀 Starting API call to: https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&outputsize=compact&apikey=[HIDDEN]
+Making GET request to: /query?function=TIME_SERIES_DAILY&symbol=IBM&outputsize=compact&apikey=***HIDDEN***
+Response status code: 200
+✅ API call completed in 127ms
+📊 Performance Summary:
+    - Response Time: 127ms
+    - Timestamp: 2025-09-13T00:40:43.475Z
+    - Symbol: IBM
+    - URL: https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&outputsize=compact&apikey=[HIDDEN]
